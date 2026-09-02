@@ -22,15 +22,26 @@ const int TFT_RST = -1;
 const uint32_t kReportIntervalMs = 5000;
 const uint32_t kHealthPublishIntervalMs = 30000;
 const uint32_t kDisplayReinitDelayMs = 2500;
+
+// Filter countdown, stock semantics: wall-clock, decremented and persisted
+// hourly. Lives in emulated EEPROM behind the settings block.
+const int kEepromAddrFilter = 512;
+const uint32_t kFilterMagic = 0x46494C54UL;  // 'FILT'
+const uint32_t kFilterTickMs = 60UL * 60UL * 1000UL;
+
+struct FilterRecord {
+    uint32_t magic;
+    uint32_t minutes;
+};
 }  // namespace
 
 AppController::AppController()
     : fan_(PIN_FAN),
       display_(TFT_CS, TFT_DC, TFT_RST, PIN_DISP_BL),
-      ring_(PIN_RING_DATA, PIN_RING_CLK, PIN_RING_LATCH, PIN_RING_HANDSHAKE),
-      ring_timer_(1, &AppController::ringTimerTick, *this),
       buttons_(BTN_UP, BTN_DOWN, BTN_EXTRA, BTN_POWER),
+      ring_(PIN_RING_DATA, PIN_RING_CLK, PIN_RING_LATCH, PIN_RING_HANDSHAKE),
       sensor_(PIN_SENSOR_TX),
+      ring_timer_(1, &AppController::ringTimerTick, *this),
       web_(80),
       q_head_(0),
       q_tail_(0),
@@ -43,6 +54,7 @@ AppController::AppController()
       last_applied_lights_(false),
       last_applied_status_led_(false),
       force_apply_lights_(false),
+      last_filter_decrement_ms_(0),
       last_report_ms_(0),
       last_health_publish_ms_(0),
       last_sensor_sample_ms_(0),
@@ -58,6 +70,7 @@ void AppController::init() {
 
     initDeviceState(state_, millis());
     settings_store_.loadOrInitialize(settings_);
+    loadFilterState();
 
     fan_.init();
     display_.init();
@@ -102,6 +115,7 @@ void AppController::tick() {
     tickNetwork(now_ms);
     tickReport(now_ms);
     tickHealthPublish(now_ms);
+    tickFilter(now_ms);
 
     if (state_.dirty_publish) {
         queueStatePublish();
@@ -223,6 +237,30 @@ void AppController::tickSerialProvision() {
 
 void AppController::ringTimerTick() {
     ring_.tick();
+}
+
+void AppController::loadFilterState() {
+    FilterRecord rec;
+    EEPROM.get(kEepromAddrFilter, rec);
+    state_.filter_minutes = (rec.magic == kFilterMagic) ? rec.minutes : 0;
+}
+
+void AppController::saveFilterState() {
+    FilterRecord rec = {kFilterMagic, state_.filter_minutes};
+    EEPROM.put(kEepromAddrFilter, rec);
+}
+
+void AppController::tickFilter(uint32_t now_ms) {
+    if (now_ms - last_filter_decrement_ms_ < kFilterTickMs) {
+        return;
+    }
+    last_filter_decrement_ms_ = now_ms;
+    if (state_.filter_minutes == 0) {
+        return;
+    }
+    state_.filter_minutes = (state_.filter_minutes > 60) ? state_.filter_minutes - 60 : 0;
+    saveFilterState();
+    state_.dirty_publish = true;
 }
 
 void AppController::tickNetwork(uint32_t now_ms) {
@@ -402,6 +440,12 @@ void AppController::applyCommand(const Command& cmd) {
         state_.dirty_publish = true;
         return;
     }
+    if (cmd.type == CommandType::SetFilterDays) {
+        state_.filter_minutes = static_cast<uint32_t>(cmd.value) * 1440UL;
+        saveFilterState();
+        state_.dirty_publish = true;
+        return;
+    }
     if (cmd.type == CommandType::SetStatusLed) {
         state_.status_led_on = (cmd.value != 0);
         state_.dirty_publish = true;
@@ -497,4 +541,5 @@ void AppController::queueStatePublish() {
     mqtt_.enqueueStatePublish("state/status_led", state_.status_led_on ? 1 : 0);
     mqtt_.enqueueStatePublish("sensor/pm25", state_.pm25_smooth);
     mqtt_.enqueueStatePublish("sensor/pm10", state_.pm10_smooth);
+    mqtt_.enqueueStatePublish("sensor/filter_minutes", state_.filter_minutes);
 }

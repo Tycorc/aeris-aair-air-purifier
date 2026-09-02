@@ -18,6 +18,7 @@ enum class CommandType : uint8_t {
     SetRingBrightness,
     SetRingBlink,
     SetStatusLed,
+    SetFilterDays,
     TogglePower,
     ToggleWifi,
     ResetWifiSettings,

@@ -58,6 +58,9 @@ private:
 
     void tickSerialProvision();
     void ringTimerTick();
+    void loadFilterState();
+    void saveFilterState();
+    void tickFilter(uint32_t now_ms);
 
     bool setup_mode_;
     bool setup_web_started_;
@@ -69,6 +72,7 @@ private:
     bool last_applied_lights_;
     bool last_applied_status_led_;
     bool force_apply_lights_;
+    uint32_t last_filter_decrement_ms_;
     uint32_t last_report_ms_;
     uint32_t last_health_publish_ms_;
     uint32_t last_sensor_sample_ms_;

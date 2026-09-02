@@ -187,6 +187,9 @@ void MqttClient::subscribeTopics() {
 
     snprintf(topic, sizeof(topic), "%s/cmd/status_led", root_);
     client_->subscribe(topic);
+
+    snprintf(topic, sizeof(topic), "%s/cmd/filter_days", root_);
+    client_->subscribe(topic);
 }
 
 void MqttClient::onMessage(char* topic, uint8_t* payload, unsigned int length) {
@@ -271,6 +274,16 @@ bool MqttClient::parseCommand(const char* topic, const char* payload, Command& o
             }
             out.type = CommandType::SetRingBlink;
             out.value = ms;
+            return true;
+        }
+        snprintf(t, sizeof(t), "%s/cmd/filter_days", root_);
+        if (strcmp(topic, t) == 0) {
+            int days = 0;
+            if (!parseIntStrict(payload, 0, 3650, days)) {
+                return false;
+            }
+            out.type = CommandType::SetFilterDays;
+            out.value = days;
             return true;
         }
     }
