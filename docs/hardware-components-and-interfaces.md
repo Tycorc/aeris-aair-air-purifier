@@ -164,8 +164,58 @@ Notes:
 - These teardown details are external observations and do not necessarily represent all targets directly controlled by this firmware.
 - Based on the current code in this repo, the control target is `Particle Photon`, and it directly uses TFT, buttons, fan PWM, and PM sensor UART.
 
-## 6. Recommended Next Steps
+## 6. First-Party Teardown: EC_UI Board
 
+Photographed on a powered spare unit, 2026-09-04. Unlike section 5 these are observations of
+our own hardware, so treat them as confirmed unless a row says otherwise.
+
+![EC_UI board, front](img/ui-board-front.jpg)
+
+![EC_UI board, harness connector](img/ui-board-harness.jpg)
+
+### 6.1 Board identity
+
+Silkscreen on the round front board reads `Aair EC_UI` followed by `MB_110-Z...`, the tail
+obscured by a reflector. This is the user-interface board, distinct from the mainboard the
+section 5 gist describes.
+
+### 6.2 What is on it
+
+- **LED ring.** A dense perimeter ring of small white emitters with sequential designators
+  running to at least `LED57`, all lit uniformly.
+- **Four lens LEDs.** Large collimator-style emitters spaced around the ring. The ring and
+  these four are separate populations on one board, which matters because the key-light
+  shift-register driver addresses the four, not the ring.
+- **Display.** A TFT in a metal bezel, connected by flex ribbon to a small secondary PCB
+  rather than to the harness directly. It shows the `aair` wordmark with a three-dot
+  animation while booting. That is stock behaviour, and a useful sign the panel is alive
+  before any reflash.
+- **Front-panel controls.** Two round pads and a small circular aperture sit in the black
+  chassis behind the board.
+
+### 6.3 Harness connector
+
+A six-way JST-style header carries the black harness. The silkscreen beside it reads `5V`,
+`GND`, `D0`, `RX`, `TX` and `DAC`. The pin *names* are legible; the pin *order* is not
+readable at this angle and must be confirmed against the board before wiring anything.
+
+Those names line up with the firmware pin table in section 4, which is the first direct
+evidence that this harness is the Photon interface rather than an internal bus:
+
+| Silkscreen | Firmware use | Confidence |
+|---|---|---|
+| `5V`, `GND` | supply | observed |
+| `D0` | fan PWM, `FanDriver` | matches section 4 |
+| `RX`, `TX` | `Serial1`, PM sensor UART, `SensorDriver` | matches section 4 |
+| `DAC` | probably the `A6` sensor wake line | inferred, unverified |
+
+The `DAC` row rests on Particle's pin aliasing, where `A6` is also `DAC2`. It is not a
+measurement. Confirm it before relying on it.
+
+## 7. Recommended Next Steps
+
+- Confirm the harness pin ORDER and settle the `DAC` to `A6` question in section 6.3, with a
+  meter rather than another photograph.
 - Use an oscilloscope or logic analyzer to verify the actual sensor model and command set behind `A6` and `Serial1`.
 - Add a wiring diagram showing physical connections between `Particle Photon` and the original board MCU(s) if it is a dual-MCU architecture.
 - Keep this document synchronized with `docs/interfaces.md` whenever topics/API are changed.
