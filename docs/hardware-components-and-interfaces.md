@@ -185,7 +185,13 @@ section 5 gist describes.
   running to at least `LED57`, all lit uniformly.
 - **Four lens LEDs.** Large collimator-style emitters spaced around the ring. The ring and
   these four are separate populations on one board, which matters because the key-light
-  shift-register driver addresses the four, not the ring.
+  shift-register driver addresses the four, not the ring: walking the register bit by bit on
+  a running unit lights the four buttons in pairs (0x03 power, 0x0C AirQ, 0x30 down, 0xC0 up)
+  and never a ring segment.
+  Both populations are lit in the photo above, which is stock behaviour. What is NOT yet
+  explained is why the perimeter ring stays dark under this firmware when no register bit
+  addresses it — most likely the `A4` line the driver pulses at boot and then releases to
+  `INPUT` gates it. Anyone wanting the ring as an indicator should start there.
 - **Display.** A TFT in a metal bezel, connected by flex ribbon to a small secondary PCB
   rather than to the harness directly. It shows the `aair` wordmark with a three-dot
   animation while booting. That is stock behaviour, and a useful sign the panel is alive
