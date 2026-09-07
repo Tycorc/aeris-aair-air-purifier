@@ -139,7 +139,10 @@ Date: 2026-02-22
 | Button DOWN | `D2` | GPIO in | `ButtonDriver` |
 | Button EXTRA | `D3` | GPIO in | `ButtonDriver` |
 | Button POWER | `D4` | GPIO in | `ButtonDriver` |
-| Display helper control | `D6` | GPIO out | `AppController` |
+| Key-light register data | `D5` | GPIO out | `KeyLightDriver` |
+| Key-light register clock | `D6` | GPIO out | `KeyLightDriver` |
+| Key-light register latch | `D7` | GPIO out | `KeyLightDriver` |
+| Key-light boot handshake | `A4` | GPIO out, then released | `KeyLightDriver` |
 | TFT DC | `A0` | SPI control pin | `DisplayDriver` |
 | TFT backlight | `A1` | GPIO out | `DisplayDriver` |
 | TFT CS | `A2` | SPI control pin | `DisplayDriver` |
